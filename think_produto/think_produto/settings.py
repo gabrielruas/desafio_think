@@ -29,6 +29,8 @@ SECRET_KEY = os.getenv(
     'DJANGO_SECRET_KEY',
     'django-insecure-0jn1$)x+-+i&x#n51wp*8@(7$8*+6gwe8f+9y6+zwilyo1%#ht',
 )
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
+JWT_ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRE_SECONDS', '1800'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
