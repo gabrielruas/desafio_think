@@ -3,12 +3,17 @@ import hashlib
 import hmac
 import json
 import time
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from bson import ObjectId
+from bson.errors import InvalidId
+from pymongo import MongoClient
 
 
 @require_GET
@@ -91,6 +96,74 @@ def _json_body(request):
         return json.loads(request.body.decode('utf-8') or '{}')
     except json.JSONDecodeError:
         return None
+
+
+def _products_collection():
+    client = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
+    return client[settings.MONGO_DB]['products']
+
+
+def _product_to_json(product):
+    return {
+        'id': str(product['_id']),
+        'nome': product['nome'],
+        'descricao': product['descricao'],
+        'preco': float(product['preco']),
+        'status': product['status'],
+        'data_criacao': product['data_criacao'].isoformat(),
+    }
+
+
+def _parse_product_id(product_id):
+    try:
+        return ObjectId(product_id)
+    except InvalidId:
+        return None
+
+
+def _validate_product_payload(data, partial=False):
+    if data is None:
+        return None, {'detail': 'JSON invalido.'}
+
+    errors = {}
+    product = {}
+
+    if not partial or 'nome' in data:
+        nome = (data.get('nome') or '').strip()
+        if not nome:
+            errors['nome'] = 'Informe o nome do produto.'
+        else:
+            product['nome'] = nome
+
+    if not partial or 'descricao' in data:
+        descricao = (data.get('descricao') or '').strip()
+        if not descricao:
+            errors['descricao'] = 'Informe a descricao do produto.'
+        else:
+            product['descricao'] = descricao
+
+    if not partial or 'preco' in data:
+        try:
+            preco = Decimal(str(data.get('preco')))
+        except (InvalidOperation, TypeError):
+            errors['preco'] = 'Informe um preco valido.'
+        else:
+            if preco < 0:
+                errors['preco'] = 'O preco nao pode ser negativo.'
+            else:
+                product['preco'] = float(preco)
+
+    if not partial or 'status' in data:
+        status = (data.get('status') or '').strip().lower()
+        if status not in {'ativo', 'inativo'}:
+            errors['status'] = 'Status deve ser ativo ou inativo.'
+        else:
+            product['status'] = status
+
+    if errors:
+        return None, {'detail': 'Dados invalidos.', 'errors': errors}
+
+    return product, None
 
 
 def _base64url_encode(value):
@@ -258,6 +331,78 @@ def me(request):
     )
 
 
+@csrf_exempt
+@require_http_methods(['GET', 'POST'])
+def products(request):
+    collection = _products_collection()
+
+    if request.method == 'GET':
+        status = (request.GET.get('status') or '').strip().lower()
+        query = {}
+        if status:
+            if status not in {'ativo', 'inativo'}:
+                return JsonResponse({'detail': 'Status deve ser ativo ou inativo.'}, status=400)
+            query['status'] = status
+
+        items = [_product_to_json(product) for product in collection.find(query).sort('data_criacao', -1)]
+        return JsonResponse({'results': items})
+
+    user = _current_user_from_request(request)
+    if user is None:
+        return JsonResponse({'detail': 'Token invalido ou ausente.'}, status=401)
+
+    product, error = _validate_product_payload(_json_body(request))
+    if error:
+        return JsonResponse(error, status=400)
+
+    product['data_criacao'] = datetime.now(timezone.utc)
+    result = collection.insert_one(product)
+    created = collection.find_one({'_id': result.inserted_id})
+
+    return JsonResponse(_product_to_json(created), status=201)
+
+
+@csrf_exempt
+@require_http_methods(['GET', 'PUT', 'PATCH', 'DELETE'])
+def product_detail(request, product_id):
+    object_id = _parse_product_id(product_id)
+    if object_id is None:
+        return JsonResponse({'detail': 'ID de produto invalido.'}, status=400)
+
+    collection = _products_collection()
+
+    if request.method == 'GET':
+        product = collection.find_one({'_id': object_id})
+        if product is None:
+            return JsonResponse({'detail': 'Produto nao encontrado.'}, status=404)
+        return JsonResponse(_product_to_json(product))
+
+    user = _current_user_from_request(request)
+    if user is None:
+        return JsonResponse({'detail': 'Token invalido ou ausente.'}, status=401)
+
+    if request.method == 'DELETE':
+        result = collection.delete_one({'_id': object_id})
+        if result.deleted_count == 0:
+            return JsonResponse({'detail': 'Produto nao encontrado.'}, status=404)
+        return HttpResponse(status=204)
+
+    partial = request.method == 'PATCH'
+    product, error = _validate_product_payload(_json_body(request), partial=partial)
+    if error:
+        return JsonResponse(error, status=400)
+
+    if not product:
+        return JsonResponse({'detail': 'Informe ao menos um campo para atualizar.'}, status=400)
+
+    result = collection.update_one({'_id': object_id}, {'$set': product})
+    if result.matched_count == 0:
+        return JsonResponse({'detail': 'Produto nao encontrado.'}, status=404)
+
+    updated = collection.find_one({'_id': object_id})
+    return JsonResponse(_product_to_json(updated))
+
+
 @require_GET
 def openapi_schema(request):
     return JsonResponse(
@@ -318,6 +463,45 @@ def openapi_schema(request):
                         'type': 'object',
                         'properties': {
                             'detail': {'type': 'string'},
+                        },
+                    },
+                    'ProductRequest': {
+                        'type': 'object',
+                        'required': ['nome', 'descricao', 'preco', 'status'],
+                        'properties': {
+                            'nome': {'type': 'string', 'example': 'Notebook'},
+                            'descricao': {'type': 'string', 'example': 'Notebook para desenvolvimento'},
+                            'preco': {'type': 'number', 'format': 'float', 'example': 4500.90},
+                            'status': {'type': 'string', 'enum': ['ativo', 'inativo'], 'example': 'ativo'},
+                        },
+                    },
+                    'ProductUpdateRequest': {
+                        'type': 'object',
+                        'properties': {
+                            'nome': {'type': 'string', 'example': 'Notebook'},
+                            'descricao': {'type': 'string', 'example': 'Notebook atualizado'},
+                            'preco': {'type': 'number', 'format': 'float', 'example': 4299.90},
+                            'status': {'type': 'string', 'enum': ['ativo', 'inativo'], 'example': 'inativo'},
+                        },
+                    },
+                    'ProductResponse': {
+                        'type': 'object',
+                        'properties': {
+                            'id': {'type': 'string', 'example': '66a6d9678c8f3d48e9f44b11'},
+                            'nome': {'type': 'string'},
+                            'descricao': {'type': 'string'},
+                            'preco': {'type': 'number', 'format': 'float'},
+                            'status': {'type': 'string', 'enum': ['ativo', 'inativo']},
+                            'data_criacao': {'type': 'string', 'format': 'date-time'},
+                        },
+                    },
+                    'ProductListResponse': {
+                        'type': 'object',
+                        'properties': {
+                            'results': {
+                                'type': 'array',
+                                'items': {'$ref': '#/components/schemas/ProductResponse'},
+                            }
                         },
                     },
                 },
@@ -392,6 +576,152 @@ def openapi_schema(request):
                             '401': {'description': 'Token invalido ou ausente'},
                         },
                     }
+                },
+                '/products': {
+                    'get': {
+                        'tags': ['Produtos'],
+                        'summary': 'Listar produtos',
+                        'parameters': [
+                            {
+                                'name': 'status',
+                                'in': 'query',
+                                'required': False,
+                                'schema': {'type': 'string', 'enum': ['ativo', 'inativo']},
+                            }
+                        ],
+                        'responses': {
+                            '200': {
+                                'description': 'Lista de produtos',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/ProductListResponse'}
+                                    }
+                                },
+                            }
+                        },
+                    },
+                    'post': {
+                        'tags': ['Produtos'],
+                        'summary': 'Criar produto',
+                        'security': [{'bearerAuth': []}],
+                        'requestBody': {
+                            'required': True,
+                            'content': {
+                                'application/json': {
+                                    'schema': {'$ref': '#/components/schemas/ProductRequest'}
+                                }
+                            },
+                        },
+                        'responses': {
+                            '201': {
+                                'description': 'Produto criado',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/ProductResponse'}
+                                    }
+                                },
+                            },
+                            '400': {'description': 'Dados invalidos'},
+                            '401': {'description': 'Token invalido ou ausente'},
+                        },
+                    },
+                },
+                '/products/{product_id}': {
+                    'get': {
+                        'tags': ['Produtos'],
+                        'summary': 'Buscar produto por ID',
+                        'parameters': [
+                            {
+                                'name': 'product_id',
+                                'in': 'path',
+                                'required': True,
+                                'schema': {'type': 'string'},
+                            }
+                        ],
+                        'responses': {
+                            '200': {
+                                'description': 'Produto encontrado',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/ProductResponse'}
+                                    }
+                                },
+                            },
+                            '404': {'description': 'Produto nao encontrado'},
+                        },
+                    },
+                    'put': {
+                        'tags': ['Produtos'],
+                        'summary': 'Atualizar produto completo',
+                        'security': [{'bearerAuth': []}],
+                        'parameters': [
+                            {
+                                'name': 'product_id',
+                                'in': 'path',
+                                'required': True,
+                                'schema': {'type': 'string'},
+                            }
+                        ],
+                        'requestBody': {
+                            'required': True,
+                            'content': {
+                                'application/json': {
+                                    'schema': {'$ref': '#/components/schemas/ProductRequest'}
+                                }
+                            },
+                        },
+                        'responses': {
+                            '200': {'description': 'Produto atualizado'},
+                            '400': {'description': 'Dados invalidos'},
+                            '401': {'description': 'Token invalido ou ausente'},
+                            '404': {'description': 'Produto nao encontrado'},
+                        },
+                    },
+                    'patch': {
+                        'tags': ['Produtos'],
+                        'summary': 'Atualizar produto parcial',
+                        'security': [{'bearerAuth': []}],
+                        'parameters': [
+                            {
+                                'name': 'product_id',
+                                'in': 'path',
+                                'required': True,
+                                'schema': {'type': 'string'},
+                            }
+                        ],
+                        'requestBody': {
+                            'required': True,
+                            'content': {
+                                'application/json': {
+                                    'schema': {'$ref': '#/components/schemas/ProductUpdateRequest'}
+                                }
+                            },
+                        },
+                        'responses': {
+                            '200': {'description': 'Produto atualizado'},
+                            '400': {'description': 'Dados invalidos'},
+                            '401': {'description': 'Token invalido ou ausente'},
+                            '404': {'description': 'Produto nao encontrado'},
+                        },
+                    },
+                    'delete': {
+                        'tags': ['Produtos'],
+                        'summary': 'Excluir produto',
+                        'security': [{'bearerAuth': []}],
+                        'parameters': [
+                            {
+                                'name': 'product_id',
+                                'in': 'path',
+                                'required': True,
+                                'schema': {'type': 'string'},
+                            }
+                        ],
+                        'responses': {
+                            '204': {'description': 'Produto excluido'},
+                            '401': {'description': 'Token invalido ou ausente'},
+                            '404': {'description': 'Produto nao encontrado'},
+                        },
+                    },
                 },
             },
         }

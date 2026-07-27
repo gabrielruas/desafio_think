@@ -10,4 +10,6 @@ urlpatterns = [
     path('auth/register', views.register, name='auth-register'),
     path('auth/login', views.login, name='auth-login'),
     path('auth/me', views.me, name='auth-me'),
+    path('products', views.products, name='products'),
+    path('products/<str:product_id>', views.product_detail, name='product-detail'),
 ]

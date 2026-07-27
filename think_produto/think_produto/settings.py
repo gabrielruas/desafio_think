@@ -31,6 +31,11 @@ SECRET_KEY = os.getenv(
 )
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
 JWT_ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRE_SECONDS', '1800'))
+MONGO_URI = os.getenv(
+    'MONGO_URI',
+    'mongodb://think_mongo_user:think_mongo_password@127.0.0.1:27017/think_products?authSource=admin',
+)
+MONGO_DB = os.getenv('MONGO_DB', 'think_products')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
