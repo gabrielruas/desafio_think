@@ -6,7 +6,7 @@ import time
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
@@ -180,4 +180,175 @@ def me(request):
             'email': user.email,
             'is_active': user.is_active,
         }
+    )
+
+
+@require_GET
+def openapi_schema(request):
+    return JsonResponse(
+        {
+            'openapi': '3.0.3',
+            'info': {
+                'title': 'Think Produto Auth API',
+                'version': '1.0.0',
+                'description': 'API de autenticacao com usuarios no PostgreSQL.',
+            },
+            'servers': [
+                {'url': request.build_absolute_uri('/').rstrip('/')},
+            ],
+            'components': {
+                'securitySchemes': {
+                    'bearerAuth': {
+                        'type': 'http',
+                        'scheme': 'bearer',
+                        'bearerFormat': 'JWT',
+                    }
+                },
+                'schemas': {
+                    'RegisterRequest': {
+                        'type': 'object',
+                        'required': ['username', 'email', 'password'],
+                        'properties': {
+                            'username': {'type': 'string', 'example': 'gabriel'},
+                            'email': {'type': 'string', 'format': 'email', 'example': 'gabriel@email.com'},
+                            'password': {'type': 'string', 'format': 'password', 'example': '123456'},
+                        },
+                    },
+                    'LoginRequest': {
+                        'type': 'object',
+                        'required': ['password'],
+                        'properties': {
+                            'username': {'type': 'string', 'example': 'gabriel'},
+                            'email': {'type': 'string', 'format': 'email', 'example': 'gabriel@email.com'},
+                            'password': {'type': 'string', 'format': 'password', 'example': '123456'},
+                        },
+                    },
+                    'TokenResponse': {
+                        'type': 'object',
+                        'properties': {
+                            'access_token': {'type': 'string'},
+                            'token_type': {'type': 'string', 'example': 'bearer'},
+                        },
+                    },
+                    'UserResponse': {
+                        'type': 'object',
+                        'properties': {
+                            'id': {'type': 'integer'},
+                            'username': {'type': 'string'},
+                            'email': {'type': 'string'},
+                            'is_active': {'type': 'boolean'},
+                        },
+                    },
+                    'ErrorResponse': {
+                        'type': 'object',
+                        'properties': {
+                            'detail': {'type': 'string'},
+                        },
+                    },
+                },
+            },
+            'paths': {
+                '/auth/register': {
+                    'post': {
+                        'tags': ['Autenticacao'],
+                        'summary': 'Cadastrar usuario',
+                        'requestBody': {
+                            'required': True,
+                            'content': {
+                                'application/json': {
+                                    'schema': {'$ref': '#/components/schemas/RegisterRequest'}
+                                }
+                            },
+                        },
+                        'responses': {
+                            '201': {
+                                'description': 'Usuario criado',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/UserResponse'}
+                                    }
+                                },
+                            },
+                            '400': {'description': 'Payload invalido'},
+                            '409': {'description': 'Usuario ou email ja cadastrado'},
+                        },
+                    }
+                },
+                '/auth/login': {
+                    'post': {
+                        'tags': ['Autenticacao'],
+                        'summary': 'Login',
+                        'requestBody': {
+                            'required': True,
+                            'content': {
+                                'application/json': {
+                                    'schema': {'$ref': '#/components/schemas/LoginRequest'}
+                                }
+                            },
+                        },
+                        'responses': {
+                            '200': {
+                                'description': 'Token JWT gerado',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/TokenResponse'}
+                                    }
+                                },
+                            },
+                            '400': {'description': 'Payload invalido'},
+                            '401': {'description': 'Credenciais invalidas'},
+                        },
+                    }
+                },
+                '/auth/me': {
+                    'get': {
+                        'tags': ['Autenticacao'],
+                        'summary': 'Buscar usuario autenticado',
+                        'security': [{'bearerAuth': []}],
+                        'responses': {
+                            '200': {
+                                'description': 'Usuario autenticado',
+                                'content': {
+                                    'application/json': {
+                                        'schema': {'$ref': '#/components/schemas/UserResponse'}
+                                    }
+                                },
+                            },
+                            '401': {'description': 'Token invalido ou ausente'},
+                        },
+                    }
+                },
+            },
+        }
+    )
+
+
+@require_GET
+def swagger_ui(request):
+    return HttpResponse(
+        """
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Think Produto Auth API - Swagger</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.onload = function () {
+        window.ui = SwaggerUIBundle({
+          url: "/openapi.json",
+          dom_id: "#swagger-ui",
+          presets: [SwaggerUIBundle.presets.apis],
+          layout: "BaseLayout"
+        });
+      };
+    </script>
+  </body>
+</html>
+        """.strip(),
+        content_type='text/html',
     )
