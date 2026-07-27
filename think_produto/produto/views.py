@@ -11,6 +11,81 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 
+@require_GET
+def home(request):
+    return HttpResponse(
+        """
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Think Produto</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        background: #f5f7fb;
+        color: #172033;
+        display: grid;
+        place-items: center;
+      }
+      main {
+        width: min(720px, calc(100% - 32px));
+        background: #ffffff;
+        border: 1px solid #d8deea;
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 12px 32px rgba(23, 32, 51, 0.08);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      p {
+        margin: 0 0 24px;
+        color: #526071;
+      }
+      nav {
+        display: grid;
+        gap: 12px;
+      }
+      a {
+        display: block;
+        padding: 14px 16px;
+        border: 1px solid #c8d0df;
+        border-radius: 6px;
+        color: #172033;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      a:hover {
+        background: #edf2f7;
+      }
+      code {
+        color: #344256;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Think Produto</h1>
+      <p>Painel inicial da aplicacao. Use o Django Admin para gerenciar usuarios.</p>
+      <nav>
+        <a href="/admin/">Django Admin</a>
+        <a href="/swagger/">Swagger da API</a>
+        <a href="/openapi.json">OpenAPI JSON</a>
+      </nav>
+      <p style="margin-top: 24px;">Login admin: <code>gabriel</code> / <code>123456</code></p>
+    </main>
+  </body>
+</html>
+        """.strip(),
+        content_type='text/html',
+    )
+
+
 def _json_body(request):
     try:
         return json.loads(request.body.decode('utf-8') or '{}')
