@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: think_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: think_auth
+      POSTGRES_USER: think_user
+      POSTGRES_PASSWORD: think_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - think_network
+
+  mongo:
+    image: mongo:7
+    container_name: think_mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: think_mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: think_mongo_password
+      MONGO_INITDB_DATABASE: think_products
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_products_data:/data/db
+      - ./docker/mongo/init.js:/docker-entrypoint-initdb.d/init.js
+    networks:
+      - think_network
+
+volumes:
+  postgres_auth_data:
+  mongo_products_data:
+
+networks:
+  think_network:
+    driver: bridge
