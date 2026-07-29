@@ -188,6 +188,40 @@ Entre na pasta do projeto Django:
 cd /Users/gabrielruas/Desktop/Gabriel/1-Projetos/desafio_think/Projeto/think_produto
 ```
 
+### Rodar Tudo Com Docker
+
+Este modo sobe a API, PostgreSQL e MongoDB juntos:
+
+```bash
+docker compose up --build
+```
+
+Para rodar em segundo plano:
+
+```bash
+docker compose up -d --build
+```
+
+A API ficara disponivel em:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Para parar:
+
+```bash
+docker compose down
+```
+
+Para ver logs da API:
+
+```bash
+docker compose logs -f web
+```
+
+### Rodar Apenas Bancos No Docker E API Local
+
 Suba os bancos:
 
 ```bash

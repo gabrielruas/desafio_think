@@ -1,4 +1,32 @@
 services:
+  web:
+    build:
+      context: .
+    container_name: think_web
+    restart: always
+    environment:
+      DJANGO_SECRET_KEY: change-me
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,web
+      POSTGRES_DB: think_auth
+      POSTGRES_USER: think_user
+      POSTGRES_PASSWORD: think_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      JWT_SECRET_KEY: change-me
+      JWT_ACCESS_TOKEN_EXPIRE_SECONDS: 1800
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_DB: think_products
+      MONGO_URI: mongodb://think_mongo_user:think_mongo_password@mongo:27017/think_products?authSource=admin
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - mongo
+    networks:
+      - think_network
+
   postgres:
     image: postgres:16
     container_name: think_postgres
