@@ -17,6 +17,7 @@ from .swagger import get_openapi_schema, get_swagger_html
 
 
 def json_body(request):
+    # Mantem o parse JSON em um unico ponto para padronizar erro nos controladores.
     try:
         return json.loads(request.body.decode('utf-8') or '{}')
     except json.JSONDecodeError:
@@ -24,10 +25,12 @@ def json_body(request):
 
 
 def auth_service():
+    # Fabrica simples para instanciar o servico usado pelos controladores.
     return AuthService()
 
 
 def product_service():
+    # Fabrica simples para manter views desacopladas da construcao do servico.
     return ProductService()
 
 

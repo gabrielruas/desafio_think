@@ -12,6 +12,7 @@ from .schemas import serialize_user
 
 
 class JWTService:
+    # Mantem a criacao e validacao do JWT isoladas da camada HTTP.
     def create_access_token(self, user):
         now = int(time.time())
         payload = {
@@ -76,6 +77,7 @@ class JWTService:
 
 
 class AuthService:
+    # Orquestra login/registro usando Django Auth e o repositorio de usuarios.
     def __init__(self, user_repository=None, jwt_service=None):
         self.user_repository = user_repository or UserRepository()
         self.jwt_service = jwt_service or JWTService()

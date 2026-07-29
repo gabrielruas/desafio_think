@@ -5,6 +5,7 @@ from .schemas import VALID_PRODUCT_STATUS, serialize_product
 
 
 class ProductService:
+    # Camada de servico: concentra os casos de uso de produto.
     def __init__(self, product_repository=None):
         self.product_repository = product_repository or ProductRepository()
 
@@ -16,6 +17,7 @@ class ProductService:
         return {'results': [serialize_product(product) for product in products]}, None, 200
 
     def create_product(self, product):
+        # A data de criacao pertence a regra da aplicacao, nao ao payload do cliente.
         product['data_criacao'] = datetime.now(timezone.utc)
         created = self.product_repository.create(product)
         return serialize_product(created), None, 201

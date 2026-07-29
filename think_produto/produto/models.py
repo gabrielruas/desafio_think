@@ -1,3 +1,3 @@
 from django.db import models
 
-# Create your models here.
+# Os produtos ficam no MongoDB; models Django devem ser usados apenas para dados relacionais.

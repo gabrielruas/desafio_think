@@ -5,6 +5,7 @@ VALID_PRODUCT_STATUS = {'ativo', 'inativo'}
 
 
 def serialize_user(user):
+    # Serializadores garantem que a API nao exponha campos sensiveis do model.
     return {
         'id': user.id,
         'username': user.username,
@@ -56,6 +57,7 @@ def validate_login_payload(data):
 
 
 def validate_product_payload(data, partial=False):
+    # Em atualizacoes parciais, apenas campos enviados sao validados.
     if data is None:
         return None, {'detail': 'JSON invalido.'}
 

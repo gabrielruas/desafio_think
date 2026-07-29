@@ -1,3 +1,3 @@
 from django.contrib import admin
 
-# Register your models here.
+# Registre aqui models relacionais que devam aparecer no Django Admin.

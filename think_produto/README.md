@@ -33,16 +33,16 @@ O app `produto` foi organizado em camadas para evitar regras de negocio concentr
 
 ```text
 produto/
-├── views.py          # Controllers HTTP
-├── services.py       # Service Layer: regras de negocio
-├── repositories.py   # Repository Pattern: acesso a dados
+├── views.py          # Controladores HTTP
+├── services.py       # Camada de servico: regras de negocio
+├── repositories.py   # Padrao Repositorio: acesso a dados
 ├── schemas.py        # Validacao e serializacao
 ├── auth.py           # JWT e autenticacao
-├── database.py       # Provider/Factory de conexao MongoDB
+├── database.py       # Provedor/fabrica de conexao MongoDB
 ├── swagger.py        # OpenAPI e Swagger UI
 ├── urls.py           # Rotas da aplicacao
-├── admin.py          # Registro de models no Django Admin
-└── models.py         # Models Django, se necessarios
+├── admin.py          # Registro de modelos no Django Admin
+└── models.py         # Modelos Django, se necessarios
 ```
 
 Fluxo de uma requisicao:

@@ -6,6 +6,7 @@ from .database import get_products_collection
 
 
 class UserRepository:
+    # Repositorio do PostgreSQL: encapsula consultas do Django Auth.
     def __init__(self):
         self.model = get_user_model()
 
@@ -32,6 +33,7 @@ class UserRepository:
 
 
 class ProductRepository:
+    # Repositorio do MongoDB: a camada de servico nao acessa PyMongo diretamente.
     def __init__(self):
         self.collection = get_products_collection()
 
@@ -73,6 +75,7 @@ class ProductRepository:
 
     @staticmethod
     def parse_id(product_id):
+        # Centraliza a conversao do ID publico da API para ObjectId do MongoDB.
         try:
             return ObjectId(product_id)
         except InvalidId:

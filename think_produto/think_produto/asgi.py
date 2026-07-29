@@ -1,11 +1,4 @@
-"""
-ASGI config for think_produto project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
-"""
+"""Configuracao ASGI do projeto think_produto."""
 
 import os
 

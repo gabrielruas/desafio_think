@@ -6,6 +6,7 @@ _mongo_client = None
 
 
 def get_mongo_client():
+    # Reutiliza o mesmo cliente para evitar abrir uma conexao nova a cada requisicao.
     global _mongo_client
     if _mongo_client is None:
         _mongo_client = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
