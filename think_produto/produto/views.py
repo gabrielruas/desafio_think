@@ -100,7 +100,7 @@ def home(request):
         <a href="/swagger/">Swagger da API</a>
         <a href="/openapi.json">OpenAPI JSON</a>
       </nav>
-      <p style="margin-top: 24px;">Login admin: <code>gabriel</code> / <code>123456</code></p>
+      <p style="margin-top: 24px;">Credenciais administrativas devem ser fornecidas pelo responsavel do ambiente.</p>
     </main>
   </body>
 </html>

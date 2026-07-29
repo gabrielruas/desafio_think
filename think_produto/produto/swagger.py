@@ -22,18 +22,28 @@ def get_openapi_schema(base_url):
                     'type': 'object',
                     'required': ['username', 'email', 'password'],
                     'properties': {
-                        'username': {'type': 'string', 'example': 'gabriel'},
-                        'email': {'type': 'string', 'format': 'email', 'example': 'gabriel@email.com'},
-                        'password': {'type': 'string', 'format': 'password', 'example': '123456'},
+                        'username': {'type': 'string', 'example': 'usuario_teste'},
+                        'email': {'type': 'string', 'format': 'email', 'example': 'usuario@example.com'},
+                        'password': {
+                            'type': 'string',
+                            'format': 'password',
+                            'writeOnly': True,
+                            'example': 'senha_segura',
+                        },
                     },
                 },
                 'LoginRequest': {
                     'type': 'object',
                     'required': ['password'],
                     'properties': {
-                        'username': {'type': 'string', 'example': 'gabriel'},
-                        'email': {'type': 'string', 'format': 'email', 'example': 'gabriel@email.com'},
-                        'password': {'type': 'string', 'format': 'password', 'example': '123456'},
+                        'username': {'type': 'string', 'example': 'usuario_teste'},
+                        'email': {'type': 'string', 'format': 'email', 'example': 'usuario@example.com'},
+                        'password': {
+                            'type': 'string',
+                            'format': 'password',
+                            'writeOnly': True,
+                            'example': 'senha_segura',
+                        },
                     },
                 },
                 'TokenResponse': {

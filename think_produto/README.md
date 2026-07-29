@@ -163,7 +163,7 @@ Exemplo:
 ```env
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,web
 
 POSTGRES_DB=think_auth
 POSTGRES_USER=think_user
@@ -176,9 +176,13 @@ JWT_ACCESS_TOKEN_EXPIRE_SECONDS=1800
 
 MONGO_INITDB_ROOT_USERNAME=think_mongo_user
 MONGO_INITDB_ROOT_PASSWORD=think_mongo_password
+MONGO_HOST=127.0.0.1
+MONGO_PORT=27017
 MONGO_DB=think_products
 MONGO_URI=mongodb://think_mongo_user:think_mongo_password@127.0.0.1:27017/think_products?authSource=admin
 ```
+
+Observacao: quando a API roda dentro do Docker, o host do PostgreSQL deve ser `postgres` e o host do MongoDB deve ser `mongo`. Esses nomes ja estao configurados no `docker-compose.yml`.
 
 ## Como Rodar O Projeto
 
@@ -218,6 +222,18 @@ Para ver logs da API:
 
 ```bash
 docker compose logs -f web
+```
+
+Para reconstruir a API depois de alterar codigo ou dependencias:
+
+```bash
+docker compose up -d --build web
+```
+
+Para ver todos os containers do projeto:
+
+```bash
+docker compose ps
 ```
 
 ### Rodar Apenas Bancos No Docker E API Local
@@ -278,12 +294,18 @@ OpenAPI JSON:
 http://127.0.0.1:8000/openapi.json
 ```
 
-Usuario admin criado no ambiente local:
+As credenciais administrativas devem ser fornecidas pelo responsavel do ambiente.
 
-```text
-username: gabriel
-email: gabriel@email.com
-senha: 123456
+Para criar um superusuario local sem expor senha no README:
+
+```bash
+../venv/bin/python manage.py createsuperuser
+```
+
+Se estiver rodando apenas pelo Docker:
+
+```bash
+docker compose exec web python manage.py createsuperuser
 ```
 
 ## Rotas De Autenticacao
@@ -298,9 +320,9 @@ Body:
 
 ```json
 {
-  "username": "gabriel",
-  "email": "gabriel@email.com",
-  "password": "123456"
+  "username": "usuario_teste",
+  "email": "usuario@example.com",
+  "password": "senha_segura"
 }
 ```
 
@@ -314,8 +336,8 @@ Body com username:
 
 ```json
 {
-  "username": "gabriel",
-  "password": "123456"
+  "username": "usuario_teste",
+  "password": "senha_segura"
 }
 ```
 
@@ -323,8 +345,8 @@ Body com email:
 
 ```json
 {
-  "email": "gabriel@email.com",
-  "password": "123456"
+  "email": "usuario@example.com",
+  "password": "senha_segura"
 }
 ```
 
@@ -435,7 +457,7 @@ Login:
 ```bash
 curl -X POST http://127.0.0.1:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"gabriel","password":"123456"}'
+  -d '{"username":"usuario_teste","password":"senha_segura"}'
 ```
 
 Criar produto:
@@ -530,6 +552,23 @@ Provider:
 produto/database.py
 ```
 
+### Alterar Docker
+
+Arquivos principais:
+
+```text
+Dockerfile
+docker-compose.yml
+docker/entrypoint.sh
+.dockerignore
+```
+
+Depois de alterar dependencias ou configuracao da imagem, reconstrua:
+
+```bash
+docker compose up -d --build web
+```
+
 ## Testes Manuais Recomendados
 
 Depois de qualquer mudanca importante, valide:
@@ -609,6 +648,26 @@ https://unpkg.com/swagger-ui-dist@5
 ```
 
 Se estiver sem internet, o `/openapi.json` continua funcionando, mas a interface visual pode nao carregar.
+
+### Docker Instalado Mas Nao Conecta
+
+Erro:
+
+```text
+Cannot connect to the Docker daemon
+```
+
+No macOS, abra o Docker Desktop:
+
+```bash
+open -a Docker
+```
+
+Espere iniciar e valide:
+
+```bash
+docker ps
+```
 
 ## Estado Atual Da Aplicacao
 
